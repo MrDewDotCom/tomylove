@@ -21,6 +21,7 @@
 const params = new URLSearchParams(location.search);
 const MESSAGE = params.has('msg') ? params.get('msg') : 'for you';
 const SIGNATURE = 'tomylove · 2026';
+const SHOW_HUD = params.get('hud') !== '0';   // index.html?hud=0 hides the small status text
 
 const TAU = Math.PI * 2;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -63,18 +64,18 @@ const filled = [];
 // ---------------------------------------------------------------------------
 const MATS = [
   null,
-  { a: [338, 88, 30, 56], b: [346, 82, 42, 68] },                 // 1 rose, deep pink
-  { a: [342, 58, 56, 78], b: [352, 45, 70, 90] },                 // 2 rose, pale pink
-  { a: [330, 22, 76, 96], b: [332, 95, 50, 66] },                 // 3 lily: white -> pink
-  { a: [132, 62, 22, 52], b: [86, 72, 40, 74] },                  // 4 green -> yellow-green
-  { a: [95, 45, 55, 84], b: [95, 45, 55, 84], line: 1 },          // 5 stamen
-  { a: [6, 72, 26, 46], b: [6, 72, 26, 46], dot: 1 },             // 6 anther
-  { a: [215, 8, 28, 58], b: [215, 6, 36, 66], paper: 1 },         // 7 grey wrapping paper
-  { a: [35, 10, 42, 72], b: [35, 8, 52, 80], paper: 1 },          // 8 white wrapping paper
-  { a: [44, 45, 60, 90], b: [44, 30, 72, 97] },                   // 9 cream ribbon
-  { a: [10, 82, 54, 78], b: [10, 82, 54, 78], dot: 1 },           // 10 coral filler
-  { a: [0, 0, 74, 97], b: [0, 0, 74, 97], dot: 1 },               // 11 white filler
-  { a: [125, 55, 34, 62], b: [100, 60, 44, 70], line: 1 },        // 12 greenery line
+  { a: [338, 88, 38, 64], b: [346, 82, 50, 76] },                 // 1 rose, deep pink
+  { a: [342, 58, 64, 86], b: [352, 45, 78, 97] },                 // 2 rose, pale pink
+  { a: [330, 22, 84, 97], b: [332, 95, 58, 74] },                 // 3 lily: white -> pink
+  { a: [132, 62, 30, 60], b: [86, 72, 48, 82] },                  // 4 green -> yellow-green
+  { a: [95, 45, 63, 92], b: [95, 45, 63, 92], line: 1 },          // 5 stamen
+  { a: [6, 72, 34, 54], b: [6, 72, 34, 54], dot: 1 },             // 6 anther
+  { a: [215, 8, 36, 66], b: [215, 6, 44, 74], paper: 1 },         // 7 grey wrapping paper
+  { a: [35, 10, 50, 80], b: [35, 8, 60, 88], paper: 1 },          // 8 white wrapping paper
+  { a: [44, 45, 68, 97], b: [44, 30, 80, 97] },                   // 9 cream ribbon
+  { a: [10, 82, 62, 86], b: [10, 82, 62, 86], dot: 1 },           // 10 coral filler
+  { a: [0, 0, 82, 97], b: [0, 0, 82, 97], dot: 1 },               // 11 white filler
+  { a: [125, 55, 42, 70], b: [100, 60, 52, 78], line: 1 },        // 12 greenery line
 ];
 const IS_LINE = new Uint8Array(MATS.length), IS_DOT = new Uint8Array(MATS.length), IS_PAPER = new Uint8Array(MATS.length);
 MATS.forEach((m, i) => { if (!m) return; IS_LINE[i] = m.line | 0; IS_DOT[i] = m.dot | 0; IS_PAPER[i] = m.paper | 0; });
@@ -92,10 +93,12 @@ function resize() {
 
   rows = Math.round(clamp(H / 7.5, 60, 140));
   cellH = H / rows; cellW = cellH * 0.6;
+  // narrow (phone) screens: keep at least ~125 letters across so the bouquet stays detailed
+  if (W / cellW < 125) { cellW = W / 125; cellH = cellW / 0.6; rows = Math.min(230, Math.ceil(H / cellH)); }
   cols = Math.ceil(W / cellW);
   N = cols * rows;
-  S = Math.min(H / 2.75, W / 2.8);
-  CX = W / 2; CY = H * 0.45;
+  S = Math.min(H / 2.75, W / 2.2);
+  CX = W / 2; CY = H * 0.5 - 0.12 * S;   // keeps the bouquet centred on tall phone screens
 
   depth = new Float32Array(N); idb = new Int16Array(N); lumb = new Float32Array(N);
   matb = new Uint8Array(N); tintb = new Uint8Array(N); glowb = new Float32Array(N); ribb = new Uint8Array(N);
@@ -598,7 +601,7 @@ function frame(now) {
 
   // ---- characters into the offscreen layer
   octx.clearRect(0, 0, W, H);
-  octx.font = `${cellH}px ${FONT}`;
+  octx.font = `${cellH < 9 ? 'bold ' : ''}${cellH}px ${FONT}`;
   octx.textBaseline = 'top';
   const buckets = new Map();
   filled.length = 0;
@@ -692,7 +695,7 @@ function frame(now) {
     ctx.shadowBlur = 0; ctx.textAlign = 'left';
   }
 
-  drawHud(t, bloomAvg, sway, letters);
+  if (SHOW_HUD) drawHud(t, bloomAvg, sway, letters);
   requestAnimationFrame(frame);
 }
 
